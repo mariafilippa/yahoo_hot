@@ -5,14 +5,15 @@ import aiohttp
 import uvloop
 from lxml import html
 
-url = 'https://free-proxy-list.net/anonymous-proxy.html'
-test_sites = ['https://tw.yahoo.com/',
+URL = 'https://free-proxy-list.net/anonymous-proxy.html'
+TEST_SITES = ['https://tw.yahoo.com/',
               'https://tw.buy.yahoo.com/',
               'https://tw.bid.yahoo.com/',
               'https://tw.mall.yahoo.com/']
 
+#get public proxy list
 async def get_proxies(session):
-    response = await session.get(url)
+    response = await session.get(URL)
     body = await response.text()
     tree = html.document_fromstring(body)
     proxies = tree.xpath("//table[@id='proxylisttable']/tbody/tr")
@@ -26,7 +27,7 @@ async def get_proxies(session):
 
 async def test_proxy(session, proxy):
     timeout = aiohttp.ClientTimeout(total=5)
-    tasks = [session.get(site, proxy=proxy, timeout=timeout) for site in test_sites]
+    tasks = [session.get(site, proxy=proxy, timeout=timeout) for site in TEST_SITES]
     start = time.time()
     try:
         await asyncio.gather(*tasks)
@@ -37,9 +38,9 @@ async def test_proxy(session, proxy):
         # print(err)
         pass
 
+#remove poor performing proxies
 async def get_best_proxies(session):
     proxy_list = await get_proxies(session)
-
     tasks = [test_proxy(session, proxy) for proxy in proxy_list]
     best_proxies = await asyncio.gather(*tasks)
     best_proxies = [proxy for proxy in best_proxies if proxy is not None]

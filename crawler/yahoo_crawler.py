@@ -16,13 +16,13 @@ from proxy_pool import get_best_proxies
 regex_id = re.compile('[0-9]+')
 regex_price = re.compile('[0-9,]+')
 headers = {'Host': 'tw.search.buy.yahoo.com',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:60.0) Gecko/20100101 Firefox/60.0',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'max-age=0'}
+           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:60.0) Gecko/20100101 Firefox/60.0',
+           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+           'Accept-Language': 'en-US,en;q=0.5',
+           'Accept-Encoding': 'gzip, deflate, br',
+           'Connection': 'keep-alive',
+           'Upgrade-Insecure-Requests': '1',
+           'Cache-Control': 'max-age=0'}
 
 
 async def get_categories(conn, zone, zone_id):
@@ -55,8 +55,10 @@ async def get_zones(session, conn, proxies):
     conn.commit()
 
 async def get_products(session, conn, url, cid, proxies):
+    """Add done column to category table.
+    In retry, done category can be skipped."""
     proxy = random.choice(proxies) if proxies else None
-    timeout = aiohttp.ClientTimeout(total=5)
+    timeout = aiohttp.ClientTimeout(total=10)
     try:
         response = await session.get(url, headers=headers, proxy=proxy, timeout=timeout)
         body = await response.text()
@@ -99,6 +101,7 @@ async def get_urls(session, conn, proxies):
         print(zid[1], ' zone done!')
 
 async def main(no_proxy=False):
+    """While loop is for unstable proxy where retry is needed"""
     while True:
         try:
             with sqlite3.connect('db.sqlite3') as conn:
@@ -110,9 +113,10 @@ async def main(no_proxy=False):
                         proxies = None
                     else:
                         proxies = await get_best_proxies(session)
-                    await get_zones(session, conn, proxies)
+                    c = conn.execute('SELECT * FROM web_interface_category')
+                    if not c.fetchone():
+                        await get_zones(session, conn, proxies)
                     await get_urls(session, conn, proxies)
-                    # await get_products(session, conn, 'abc', 1)
         except ClientOSError as err:
             print(err)
             asyncio.sleep(2)
@@ -132,7 +136,7 @@ if __name__ == "__main__":
         with sqlite3.connect('db.sqlite3') as conn:
             conn.execute('DELETE FROM web_interface_category')
             conn.execute('DELETE FROM web_interface_product')
-
+            conn.commit()
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(no_proxy=args.no_proxy))
