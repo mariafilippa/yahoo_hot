@@ -1,0 +1,162 @@
+{% load static %}
+
+<!DOCTYPE html>
+<!-- saved from url=(0060)https://getbootstrap.com/docs/4.0/examples/starter-template/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="https://getbootstrap.com/favicon.ico">
+
+    <title>Yahooo Buy</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="{% static 'Starter Template for Bootstrap_files/bootstrap.min.css' %}" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="{% static 'Starter Template for Bootstrap_files/starter-template.css' %}" rel="stylesheet">
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+      <a class="navbar-brand" href="#">Yahoo Buy</a>
+
+        <form class="form-inline my-2 my-lg-0 mx-auto" aciton="." method="get">
+          <select class="form-control mr-sm-2" placeholder="Demo" aria-label="Demo" name="zone" id="zone">
+              {% for zone in zones %}
+                <option value="{{ zone.id }}">{{ zone.name }}</option>
+              {% endfor %}
+          </select>
+          <select class="form-control mr-sm-2" placeholder="Demo" aria-label="Demo" name="category" id="category">
+              <option value="">全區</option>
+              {% for category in zones.0.sub.all %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+              {% endfor %}
+          </select>
+          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form>
+    </nav>
+
+    <main role="main" class="container">
+      <div class="starter-template" id="table">
+        <h6 class="display-4">熱銷商品</h6>
+        <br>
+        <style>
+            .buttons-html5 {
+                margin-bottom:20px;
+            }
+        </style>
+        <table class="table table-hover" id="datatable">
+            <thead class="thead-light">
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in object_list %}
+                <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td><a href="{{ category.url }}" target="_blank">{{ category.name }}</a></td>
+                    <td><span class="text-danger font-weight-bold">$ {{ category.price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+
+      <div class="modal fade" id="news_modal" tabindex="-1" role="dialog" data-backdrop="false" aria-labelledby="modal" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document" style="max-width:1200px;margin-top:250px;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title" style="text-align:center;"></h4>
+            </div>
+            <div class="modal-body" style="padding:20px">
+              <div id="page_target"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main><!-- /.container -->
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"></script>
+    <script src="{% static 'Starter Template for Bootstrap_files/popper.min.js.下載' %}"></script>
+    <script src="{% static 'Starter Template for Bootstrap_files/bootstrap.min.js.下載' %}"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('#datatable').DataTable( {
+            dom: 'Bfrtip',
+            paging: false,
+            searching: false,
+            buttons: [
+                'excelHtml5',
+                'csvHtml5',
+            ]
+        } );
+        $('.buttons-excel').addClass('btn btn-info').text('Download as Excel');
+        $('.buttons-csv').addClass('btn btn-info').text('Download as CSV');
+    } );
+    </script>
+    <script>
+        window.addEventListener('load', function() {
+            var zone = document.getElementById('zone');
+            zone.addEventListener('change', function() {
+                var categories = document.getElementById('category');
+                for(var i=1; i<categories.length; i++) {
+                    categories.remove(i);
+                    i--;
+                }
+                var pk = zone.value;
+                return fetch('/fetch/'+pk+'/')
+                    .then(function(response) {
+                        return response.json()})
+                    .then(function(responseData) {
+                        responseData.forEach(function(category) {
+                            var opt = document.createElement('option');
+                            opt.value = category['id'];
+                            opt.innerHTML = category['name'];
+                            categories.appendChild(opt);
+                        });
+                    })
+            });
+        });
+    </script>
+    <!-- <script>
+        var csv_button = document.getElementById('csv');
+        csv_button.addEventListener('click', function() {
+            var rows = [];
+            var products = document.querySelectorAll('#table > .row');
+            products.forEach(function(product) {
+                let name = product.querySelector('a').innerHTML;
+                let price = product.querySelector('span').innerHTML;
+                let p_string = name+','+price;
+                rows.push(p_string)
+            });
+            let csvContent = "data:text/csv;charset=utf-8,";
+            rows.forEach(function(rowArray){
+               // let row = rowArray.join(",");
+               csvContent += rowArray + "\r\n";
+            });
+            var encodedUri = encodeURI(csvContent);
+            window.open(encodedUri);
+        });
+    </script> -->
+  </body>
+</html>
